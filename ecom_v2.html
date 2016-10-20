@@ -1,0 +1,119 @@
+<!doctype html>
+<html>
+<head>
+  <script src="http://code.jquery.com/jquery-latest.min.js"></script>
+  <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+  <script src="src/d3-timeline.js"></script>
+
+  <style type="text/css">
+    .axis path,
+    .axis line {
+      fill: none;
+      stroke: black;
+      shape-rendering: crispEdges;
+    }
+    .axis text {
+      font-family: sans-serif;
+      font-size: 10px;
+    }
+    .timeline-label {
+      font-family: sans-serif;
+      font-size: 12px;
+    }
+    #timeline2 .axis {
+      transform: translate(0px,40px);
+      -ms-transform: translate(0px,40px); /* IE 9 */
+      -webkit-transform: translate(0px,40px); /* Safari and Chrome */
+      -o-transform: translate(0px,40px); /* Opera */
+      -moz-transform: translate(0px,40px); /* Firefox */
+    }
+    
+    .coloredDiv {
+      height:20px; width:20px; float:left;
+    }
+  </style>
+
+  <body>
+  	<!-- Text Box to enter AWB number -->
+    AWB Number: <input type="text" name="order" value ="" id="awbno">
+    <input type="submit" value="submit" onclick="myFunction()">
+    <div id="timeline2"></div>
+    <script type="text/javascript">
+      function myFunction() {
+        var x = document.getElementById("awbno").value;
+        var time = []
+        var testData = []
+        var c = d3.scale.category20().domain(time)
+
+        //Hit the API key for the user entered AWB number.
+        $.getJSON('---------API TO 	HIT FOR THE USER ENTERED AWB NUMBER----------------'+ x, function(data) {
+
+        	//extract the status and their updated time stamps
+          for (i = 0; i < data.delivery_request_histories.length; i++){
+            var t = new Date(data.delivery_request_histories[i].updated_at)
+            var d = Date.UTC(t.getFullYear(),t.getMonth(),t.getDate(),t.getHours(),t.getMinutes(),t.getSeconds())-19800000 // Subtracting number of milliseconds in 5 hours 30 minutes
+            data.delivery_request_histories[i].updated_at=d
+          }
+          for (i = 0; i < data.delivery_request_histories.length; i++){
+            time.push([data.delivery_request_histories[i].state ,data.delivery_request_histories[i].updated_at])
+          }
+          //Set colours, starting time and ending time for each status for data
+          for (i = 0; i < time.length; i++){
+            testData.push({"times" : [{"color": c(time[i][0]), "starting_time": time[i][1], "ending_time": time[i][1]+100}]})
+          }
+          //Set the parameters of the timeline
+          var chart = d3.timeline()
+            .tickFormat(
+              {format: d3.time.format("%I%p"),
+              tickTime: d3.time.hours,
+              tickInterval: 2,
+              tickSize: 20})
+            .display("circle");
+
+          width = 1300
+          height = 1200
+
+          //Remove previous timeline if exists
+          d3.select("svg").remove();
+
+          //Creating timeline
+          var svg = d3.select("#timeline2").append("svg").attr("width", width).attr("height", height)
+            .datum(testData).call(chart);
+
+          //Creating Legends
+          var legend = d3.select('svg')
+            .append("g")
+            .selectAll("g")
+            .data(c.domain())
+            .enter()
+            .append('g')
+              .attr('class', 'legend')
+              .attr('transform', function(d, i) {
+                var height = 15;
+                var x = 100;
+                var y = i * height + 100;
+                return 'translate(' + x + ',' + y + ')';
+              });
+
+           //Appending rectangle to the legends
+          legend.append('rect')
+            .attr('width', 15)
+            .attr('height', 15)
+            .style('fill', c)
+            .style('stroke', c);
+ 			
+ 		//Adding text to the legends
+          legend.append('text')
+            .attr('x', 15 + 3)
+            .attr('y', 15 - 3)
+            .text(function(d,i) { 
+              var date = new Date(time[i][1]);
+              date.toString("HH : MM : SS"); // "Dec 20"
+              return '' + time[i][0] + ' : ' + date; })
+            .style("font-size","12px")          
+        });
+      }
+    </script>
+</head>
+</body>
+</html>
